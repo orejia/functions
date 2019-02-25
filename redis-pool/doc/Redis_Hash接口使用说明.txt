@@ -1,0 +1,142 @@
+Redis Hash 库使用说明
+编译静态库方法：
+	->cd redis-pool
+	->make clean
+	->make  //生成静态库，log_level=4
+
+编译工具：
+	->cd redis-pool
+	->make clean
+	->make debug=debug demo //生成redis连接池定位工具
+	->在test目录生成bin_redis_debug工具。
+
+1. 库使用文件详单
+->目录：redis
+	->静态库: libhashmap.a
+	->头文件：DbConn.h
+						
+2. 环境准备：
+	2.1 编译准备
+		->linux服务器
+		->安装redis编译库
+		->安装libevent编译库
+		->所需外部库:-lpthread, -lhiredis, -levent
+		->所需外部头文件:
+				<hiredis/hiredis.h>, 
+				<hiredis/async.h>
+				<hiredis/adapters/libevent.h>
+		
+	2.2 运行准备
+		->修改系统句柄限制，配置如下：
+		  i)在文件/etc/sysctl.conf末尾增加一行：fs.file-max=1000000
+		  ii)在文件/etc/security/limits.conf末尾增加两行：
+		  	* soft nofile 1000000
+				* hard nofile 1000000
+			iii)执行命令：sysctl -p
+			iv)退出所有终端并重新登录。
+			v)观察配置效果如下表示成功：			
+				[@QS1 ~]$ ulimit -n
+				1000000
+				[@QS1 ~]$ cat /proc/sys/fs/file-max
+				1000000      
+				
+3.接口说明：
+	3.1 ->redis同步命令接口：
+	->头文件：DbConn.h
+	->类：DbPool //支持redis读写操作，但是消耗的资源是DbRead，DbWrite的两倍
+			static DbPool* instance(); //获取连接池单例
+			
+			//添加redis实例, 必须在程序初始化阶段执行。
+			bool init(const std::string& path = "etc/config.redis"); 
+			
+			//用于设置类命令
+			bool appendCmd(const char key[], const char format[], ...); //同步批量添加命令
+			void commit(const char key[]); //同步提交指定key对应db中的未提交批量命令
+			void commit(); //同步提交所有db中未提交的批量命令	
+			
+			//用于查询类命令，返回值reply如果非空，必须由调用者其释放内存。
+			redisReply* operation(const char key[], const char format[], ...); //单次同步实时命令
+			
+	->类：DbRead //仅持redis读操作
+			static DbRead* instance();
+			bool init(const std::string& path = "etc/config.redis");
+			redisReply* operation(const char key[], const char format[], ...);	
+
+	->类：DbWrite //仅持redis写操作
+			static DbWrite* instance();
+			bool init(const std::string& path = "etc/config.redis");
+			bool appendCmd(const char key[], const char format[], ...);
+    	void commit(const char key[]);
+    	void commit();
+	
+4. 使用说明：
+->类DbPool不允许自行创建，必须通过静态方法DbPool::instance()获取类指针。
+->DbPool类的【init】接口必须初始化成功，保证把配置的redis数据库添加到hash池。
+->同步批量命令由【appendCmd】和【commit】组合实现redis设置功能。
+	必须由调用者主动执行【commit】提交所有批量命令。
+->redis的配置文件默认路径为当前目录的etc/config.redis；
+
+5. 使用示例：
+->设置类命令实例：
+｛
+	//添加redis主机
+	pool::DbPool::instance()->init();
+	
+  //添加批量命令
+	pool::DbPool::instance()->appendCmd("key1", 
+  	"HMSET hashtb num %d name %s  key %s key1 %s",
+  		112, "test", "", "bb");
+  pool::DbPool::instance()->appendCmd("key1", 
+  	"HMSET hashtb num %d name %s  key %s key1 %s",
+  		113, "test", "", "cc");
+  pool::DbPool::instance()->appendCmd("key1", 
+  	"HMSET hashtb num %d name %s  key %s key1 %s",
+  		114, "test", "", "dd");
+  		
+  //提交
+  pool::DbPool::instance()->commit("key1");
+  
+  /**说明：
+  *也可以采用懒惰方式提交,则会把hash池中所有db实例为提交的命令都提交。
+  *pool::DbPool::instance()->commit();
+  **/
+｝
+
+->查询类命令实例：
+｛
+	//添加redis主机
+	pool::DbPool::instance()->init();
+	
+  //执行查询命令：
+	redisReply *reply = NULL;
+  reply = pool::DbPool::instance()->operation(key.c_str(),
+          "SINTERSTORE %s %s %s", 
+          destTable.c_str(), firstTable, secondTable);
+  if(reply == NULL)
+  {
+      ERR_LOG("getSinterStore from %s and %s error", firstTable, secondTable);
+      return "";
+  }
+
+  freeReplyObject(reply);
+  return destTable;
+ }
+
+6. 获取地址：
+//192.168.1.214:/home/build_version/redis
+
+
+7. 行情模块使用库文件详细清单：
+libboost_thread-mt.so: 1.41.0
+libboost_iostreams.so: 1.41.0
+libboost_filesystem.so: 1.41.0
+#boost库由[boost-devel.x86_64]统一安装。
+libhiredis.so: 2.8.19
+libevent.so: 1.4.13
+libfcgi.so: 2.4.1
+libz.so: zlib-1.2.3-29.el6.x86_64
+libjsoncpp.a: 0.12
+
+以下为编译环境使用的公司内部库，使用原则为最新版：
+dbfpostman.a
+libhashmap.a

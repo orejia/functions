@@ -1,0 +1,41 @@
+redis配置规划方案
+1. redis服务器
+1.1 服务器SVN文件部署
+1.1.1 配置文件部署目录：/kds/code/server/trunk/etc/
+1.1.1.1 配置文件名：redis.conf
+1.1.2 程序脚本部署目录：/kds/code/server/trunk/bin/
+1.1.2.1 脚本名称：redis-start.sh, redis-stop.sh, redis-restart.sh, redis-status.sh, redis-backup.sh
+
+
+1.2 服务器生产环境文件部署
+1.2.1 配置文件部署目录：/opt/kds/mobile-stock/3rd-soft/etc/
+1.2.1.1 配置文件名：同1.1.1.1
+
+1.2.2 数据dump文件部署目录：/opt/kds/mobile-stock/3rd-soft/data/redis-server/
+1.2.2.1 数据dump文件名:dump_6379.rdb, dump_6380.rdb, ..., dump_6478.rdb
+
+1.2.3 redis服务程序脚本目录：/opt/kds/mobile-stock/3rd-soft/bin/redis-server
+1.2.3.1 程序脚本名称：redis-server, redis-cli, redis-start.sh,
+				 redis-stop.sh, redis-restart.sh, redis-status.sh
+1.3 说明
+1.3.1 redis服务器启动脚本默认启动redis实例为：
+		6379 ～6428： 50个实例作为交易行情共用
+		7379：交易专用
+
+
+2. redis客户端
+2.1 客户端SVN文件部署
+2.1.1 redis-pool库文件源码目录：/kds/code/server/trunk/redis-pool/
+2.1.1.1 redis-pool客户端配置文件路径：/kds/code/server/trunk/redis-pool/etc/config.redis
+
+2.2 客户端生产环境文件部署
+2.2.1 redis客户端配置文件路径：/opt/kds/mobile-stock/redis-pool/etc/
+2.2.1.1 redis客户端配置文件名称：config.redis
+
+2.3 说明：
+2.3.1 该配置是行情、交易5档共用的配置文件，各模块必须指定到
+		固定路径/opt/kds/mobile-stock/redis-pool/etc/config.redis
+2.3.2 行情和交易共用的redis默认为50个实例，起始端口默认为6379.
+    交易专用的redis为1个实例，起始端口默认为7379.		
+
+本文档路径：svn://192.168.230.119/kds/code/server/trunk/redis-pool/etc

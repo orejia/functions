@@ -1,0 +1,10 @@
+{
+	"redis_hosts": [
+		{
+			"redis_ip":"192.168.230.214",
+			"redis_port":"6379",
+			"redis_num":"20"
+		}
+	],
+	";redis_passwd":"foobared"
+}
